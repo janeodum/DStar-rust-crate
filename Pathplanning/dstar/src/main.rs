@@ -1,5 +1,5 @@
-//! Compute a shortest path (or all shorted paths) using the [A* search
-//! algorithm](https://en.wikipedia.org/wiki/A*_search_algorithm).
+//! Compute a shortest path (or all shorted paths) using the [D* search
+//! algorithm](https://en.wikipedia.org/wiki/D*#Pseudocode).
 
 use indexmap::map::Entry::{Occupied, Vacant};
 use num_traits::Zero;
@@ -12,74 +12,9 @@ use std::usize;
 use super::reverse_path;
 use crate::FxIndexMap;
 
-/// Compute a shortest path using the [A* search
-/// algorithm](https://en.wikipedia.org/wiki/A*_search_algorithm).
-///
-/// The shortest path starting from `start` up to a node for which `success` returns `true` is
-/// computed and returned along with its total cost, in a `Some`. If no path can be found, `None`
-/// is returned instead.
-///
-/// - `start` is the starting node.
-/// - `successors` returns a list of successors for a given node, along with the cost for moving
-/// from the node to the successor. This cost must be non-negative.
-/// - `heuristic` returns an approximation of the cost from a given node to the goal. The
-/// approximation must not be greater than the real cost, or a wrong shortest path may be returned.
-/// - `success` checks whether the goal has been reached. It is not a node as some problems require
-/// a dynamic solution instead of a fixed node.
-///
-/// A node will never be included twice in the path as determined by the `Eq` relationship.
-///
-/// The returned path comprises both the start and end node.
-///
-/// # Example
-///
-/// We will search the shortest path on a chess board to go from (1, 1) to (4, 6) doing only knight
-/// moves.
-///
-/// The first version uses an explicit type `Pos` on which the required traits are derived.
-///
-/// ```
-/// use pathfinding::prelude::astar;
-///
-/// #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
-/// struct Pos(i32, i32);
-///
-/// impl Pos {
-///   fn distance(&self, other: &Pos) -> u32 {
-///     (self.0.abs_diff(other.0) + self.1.abs_diff(other.1)) as u32
-///   }
-///
-///   fn successors(&self) -> Vec<(Pos, u32)> {
-///     let &Pos(x, y) = self;
-///     vec![Pos(x+1,y+2), Pos(x+1,y-2), Pos(x-1,y+2), Pos(x-1,y-2),
-///          Pos(x+2,y+1), Pos(x+2,y-1), Pos(x-2,y+1), Pos(x-2,y-1)]
-///          .into_iter().map(|p| (p, 1)).collect()
-///   }
-/// }
-///
-/// static GOAL: Pos = Pos(4, 6);
-/// let result = astar(&Pos(1, 1), |p| p.successors(), |p| p.distance(&GOAL) / 3,
-///                    |p| *p == GOAL);
-/// assert_eq!(result.expect("no path found").1, 4);
-/// ```
-///
-/// The second version does not declare a `Pos` type, makes use of more closures,
-/// and is thus shorter.
-///
-/// ```
-/// use pathfinding::prelude::astar;
-///
-/// static GOAL: (i32, i32) = (4, 6);
-/// let result = astar(&(1, 1),
-///                    |&(x, y)| vec![(x+1,y+2), (x+1,y-2), (x-1,y+2), (x-1,y-2),
-///                                   (x+2,y+1), (x+2,y-1), (x-2,y+1), (x-2,y-1)]
-///                               .into_iter().map(|p| (p, 1)),
-///                    |&(x, y)| (GOAL.0.abs_diff(x) + GOAL.1.abs_diff(y)) / 3,
-///                    |&p| p == GOAL);
-/// assert_eq!(result.expect("no path found").1, 4);
-/// ```
+
 #[allow(clippy::missing_panics_doc)]
-pub fn astar<N, C, FN, IN, FH, FS>(
+pub fn dstar<N, C, FN, IN, FH, FS>(
     start: &N,
     mut successors: FN,
     mut heuristic: FH,
@@ -147,11 +82,7 @@ where
     None
 }
 
-/// Compute all shortest paths using the [A* search
-/// algorithm](https://en.wikipedia.org/wiki/A*_search_algorithm). Whereas `astar`
-/// (non-deterministic-ally) returns a single shortest path, `astar_bag` returns all shortest paths
-/// (in a non-deterministic order).
-///
+
 /// The shortest paths starting from `start` up to a node for which `success` returns `true` are
 /// computed and returned in an iterator along with the cost (which, by definition, is the same for
 /// each shortest path), wrapped in a `Some`. If no paths are found, `None` is returned.
@@ -169,12 +100,12 @@ where
 /// Each path comprises both the start and an end node. Note that while every path shares the same
 /// start node, different paths may have different end nodes.
 #[allow(clippy::missing_panics_doc)]
-pub fn astar_bag<N, C, FN, IN, FH, FS>(
+pub fn dstar_bag<N, C, FN, IN, FH, FS>(
     start: &N,
     mut successors: FN,
     mut heuristic: FH,
     mut success: FS,
-) -> Option<(AstarSolution<N>, C)>
+) -> Option<(DstarSolution<N>, C)>
 where
     N: Eq + Hash + Clone,
     C: Zero + Ord + Copy,
@@ -273,18 +204,8 @@ where
     })
 }
 
-/// Compute all shortest paths using the [A* search
-/// algorithm](https://en.wikipedia.org/wiki/A*_search_algorithm). Whereas `astar`
-/// (non-deterministic-ally) returns a single shortest path, `astar_bag` returns all shortest paths
-/// (in a non-deterministic order).
-///
-/// This is a utility function which collects the results of the `astar_bag` function into a
-/// vector. Most of the time, it is more appropriate to use `astar_bag` directly.
-///
-/// ### Warning
-///
-/// The number of results with the same value might be very large in some graphs. Use with caution.
-pub fn astar_bag_collect<N, C, FN, IN, FH, FS>(
+
+pub fn dstar_bag_collect<N, C, FN, IN, FH, FS>(
     start: &N,
     successors: FN,
     heuristic: FH,
@@ -298,7 +219,7 @@ where
     FH: FnMut(&N) -> C,
     FS: FnMut(&N) -> bool,
 {
-    astar_bag(start, successors, heuristic, success)
+    dstar_bag(start, successors, heuristic, success)
         .map(|(solutions, cost)| (solutions.collect(), cost))
 }
 
@@ -331,16 +252,16 @@ impl<K: Ord> Ord for SmallestCostHolder<K> {
     }
 }
 
-/// Iterator structure created by the `astar_bag` function.
+/// Iterator structure created by the `dstar_bag` function.
 #[derive(Clone)]
-pub struct AstarSolution<N> {
+pub struct DstarSolution<N> {
     sinks: Vec<usize>,
     parents: Vec<(N, Vec<usize>)>,
     current: Vec<Vec<usize>>,
     terminated: bool,
 }
 
-impl<N: Clone + Eq + Hash> AstarSolution<N> {
+impl<N: Clone + Eq + Hash> DstarSolution<N> {
     fn complete(&mut self) {
         loop {
             let ps = match self.current.last() {
@@ -370,7 +291,7 @@ impl<N: Clone + Eq + Hash> AstarSolution<N> {
     }
 }
 
-impl<N: Clone + Eq + Hash> Iterator for AstarSolution<N> {
+impl<N: Clone + Eq + Hash> Iterator for DstarSolution<N> {
     type Item = Vec<N>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -391,4 +312,4 @@ impl<N: Clone + Eq + Hash> Iterator for AstarSolution<N> {
     }
 }
 
-impl<N: Clone + Eq + Hash> FusedIterator for AstarSolution<N> {}
+impl<N: Clone + Eq + Hash> FusedIterator for DstarSolution<N> {}

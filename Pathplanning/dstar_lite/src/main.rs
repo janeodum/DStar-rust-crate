@@ -126,3 +126,115 @@ fn cost_compute(
 
     Some(cost + successor_node.g - node.g)
 }
+
+// update_vertex function works:
+
+// First, the function retrieves a mutable reference to the node to update from the nodes array.
+
+// Then, if the current node is not the goal node, the function calculates a new rhs (right-hand-side) value for the node by considering the costs of reaching each of its successors. If a successor node is "new" (i.e., has not been visited before), its rhs value is set to the cost of reaching it plus its current g value. If a successor node is "open" (i.e., has been visited before and is still open for expansion), its rhs value is set to the minimum of its current rhs value and the cost of reaching it plus the g value of the current node plus the cost of the edge between the two nodes. If a successor node is "closed" (i.e., has been visited before but is not open for expansion anymore), its rhs value is not updated.
+
+// Once the rhs values of all the successors have been considered, the function updates the rhs value of the current node to be the minimum of the rhs values of all its successors.
+
+// If the current node is open, the function updates its g value to be the minimum of its rhs value and its current g value. If the g value has changed, the node is marked as closed and its neighbors are recursively updated using the update_vertex function. If the g value has not changed, the node remains open.
+
+// If the current node is not open but is new, it is marked as open and its neighbors are recursively updated using the update_vertex function.
+
+// If the current node is not open and is not new, its g value and rhs value may need to be updated based on the g values and rhs values of its predecessors. If the rhs value of the current node is equal to its previous g value, the function checks if any predecessor nodes can reach the current node with a lower cost than before. If so, the function updates the rhs value of the current node accordingly. Then, the function checks if the g value of the current node needs to be updated based on its new rhs value. If the g value has changed, the node is marked as open and its neighbors are recursively updated using the update_vertex function. If the g value has not changed, the node remains closed.
+fn update_vertex(
+    nodes: &mut Array2<Node>,
+    node: &(usize, usize),
+    start: &(usize, usize),
+    goal: &Node,
+) {
+    let mut u = nodes.get_mut(node.0, node.1).unwrap();
+
+    if u != goal {
+        let mut rhs = f32::INFINITY;
+
+        for successor in successors() {
+            if let Some(cost) = cost_compute(&nodes.view(), &u, &successor) {
+                let (x, y) = successor;
+                let successor_node = nodes.get(x, y).unwrap();
+
+                if successor_node.is_new() {
+                    rhs = rhs.min(cost + successor_node.g);
+                } else if successor_node.is_open() {
+                    rhs = rhs.min(cost + successor_node.g);
+                    let pred_cost = cost_compute(&nodes.view(), &successor_node, node).unwrap();
+                    if pred_cost + u.g < successor_node.g {
+                        successor_node.rhs = pred_cost + u.g;
+                        successor_node.g = pred_cost + u.g;
+                        nodes.get_mut(successor.0, successor.1).unwrap().set_open();
+                    }
+                }
+            }
+        }
+
+        u.rhs = rhs;
+    }
+
+    if u.is_open() {
+        let k_old = u.key();
+        let k_new = (u.rhs + u.g, u.rhs);
+        if k_old < k_new {
+            nodes.get_mut(u.x, u.y).unwrap().g = u.rhs + u.g;
+            nodes.get_mut(u.x, u.y).unwrap().set_closed();
+
+            for neighbor in neighbors(node) {
+                if let Some(cost) = cost_compute(&nodes.view(), &u, &neighbor) {
+                    update_vertex(nodes, &neighbor, start, goal);
+                }
+            }
+        } else {
+            let mut g_old = u.g;
+            let mut rhs_old = u.rhs;
+            u.g = f32::INFINITY;
+            u.rhs = u.key().1;
+
+            for predecessor in predecessors() {
+                if let Some(cost) = cost_compute(&nodes.view(), &predecessor, node) {
+                    let (x, y) = predecessor;
+                    let predecessor_node = nodes.get(x, y).unwrap();
+
+                    if predecessor_node == goal {
+                        continue;
+                    }
+
+                    if predecessor_node.rhs + cost == g_old {
+                        if let Some(new_cost) = cost_compute(&nodes.view(), &predecessor, &u) {
+                            rhs_old = rhs_old.min(predecessor_node.g + new_cost);
+                        }
+                    }
+                }
+            }
+
+            u.rhs = rhs_old;
+            if u.rhs != g_old {
+                u.set_open();
+            }
+
+            for neighbor in neighbors(node) {
+                if let Some(cost) = cost_compute(&nodes.view(), &u, &neighbor) {
+                    update_vertex(nodes, &neighbor, start, goal);
+                }
+            }
+        }
+    } else if u.is_new() {
+        u.rhs = u.key().1;
+        u.set_open();
+
+        for neighbor in neighbors(node) {
+            if let Some(cost) = cost_compute(&nodes.view(), &u, &neighbor) {
+                update_vertex(nodes, &neighbor, start, goal);
+            }
+        }
+    } else {
+        u.set_open();
+
+        for neighbor in neighbors(node) {
+            if let Some(cost) = cost_compute(&nodes.view(), &u, &neighbor) {
+                update_vertex(nodes, &neighbor, start, goal);
+            }
+        }
+    }
+}

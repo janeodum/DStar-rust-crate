@@ -193,7 +193,7 @@ where
             .map(|(k, (ps, _))| (k, ps.into_iter().collect()))
             .collect();
         (
-            AstarSolution {
+            DstarSolution {
                 sinks: sinks.into_iter().collect(),
                 parents,
                 current: vec![],

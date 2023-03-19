@@ -238,3 +238,106 @@ fn update_vertex(
         }
     }
 }
+// The calculate_key function takes a reference to a Node struct and returns a tuple of two f64 values. The first value, k1, is calculated as the sum of the smaller of the g and rhs values for the node, and the heuristic estimate of the distance from the node to the goal. The second value, k2, is simply the smaller of the g and rhs values.
+
+// The returned tuple is used as the key for the priority queue, so that nodes with smaller keys are popped from the queue first. The choice of k1 and k2 for the key values ensures that nodes with smaller g and rhs values, and nodes closer to the goal, are prioritized by the algorithm.
+
+fn calculate_key(node: &Node) -> (f64, f64) {
+    let k1 = f64::min(node.g, node.rhs) + heuristic(node, &node.goal);
+    let k2 = f64::min(node.g, node.rhs);
+    (k1, k2)
+}
+
+// we initialize a priority queue with a single state consisting of the start node, and then repeatedly pop the state with the smallest key value from the priority queue until we reach the goal node or the priority queue is empty. For each node popped from the priority queue, we update its g and rhs values using the update_vertex function, and then iterate over its neighbors to see if we can improve their values. If a neighbor's g or rhs value is updated, we push it onto the priority queue with a new key value computed using the calculate_key function.
+
+// Once we have found the optimal path from the start node to the goal node, we construct it by starting at the goal node and repeatedly moving to its neighbor with the smallest rhs value until we reach the start node. The path is then printed to the console.
+
+fn main() {
+    // create the initial search graph
+    let mut nodes = vec![
+        Node { x: 0, y: 0, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 0, y: 1, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 0, y: 2, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 1, y: 1, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 1, y: 2, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 2, y: 2, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 3, y: 2, g: 0.0, rhs: 0.0 },
+        Node { x: 4, y: 2, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 5, y: 2, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 6, y: 2, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 7, y: 2, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 7, y: 1, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 7, y: 0, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 6, y: 0, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 5, y: 0, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 4, y: 0, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 3, y: 0, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 2, y: 0, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 1, y: 0, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+        Node { x: 1, y: 3, g: std::f64::INFINITY, rhs: std::f64::INFINITY },
+    ];
+
+    // set the start and goal nodes
+    let start = &mut nodes[1];
+    let goal = &mut nodes[18];
+    start.g = 0.0;
+    start.rhs = 0.0;
+
+    // initialize the priority queue
+    let mut queue = BinaryHeap::new();
+    queue.push(State { key: calculate_key(start), node: start });
+
+    // run the algorithm
+    while let Some(State { node, .. }) = queue.pop() {
+        if node == goal {
+            break;
+        }
+
+        node.visited = true;
+
+        update_vertex(&mut nodes, &mut queue, node);
+
+        for neighbor in get_neighbors(&nodes, node) {
+            if !neighbor.visited {
+                let new_g = node.g + cost(&nodes, node, neighbor);
+                if new_g < neighbor.g {
+                    neighbor.rhs = new_g + heuristic(&neighbor, goal);
+                    neighbor.g = new_g;
+                    queue.push(State { key: calculate_key(&neighbor), node: neighbor });
+                } else if new_g < neighbor.rhs {
+                    neighbor.rhs = new_g;
+                    queue.push(State { key: calculate_key(&neighbor), node: neighbor });
+                }
+            }
+        }
+    }
+
+    // get the path
+    let mut path = vec![goal];
+    let mut current = goal;
+
+    while current != start {
+        let neighbors = get_neighbors(&nodes, current);
+        let mut min_rhs = std::f64::INFINITY;
+        let mut next_node = current;
+
+        for neighbor in neighbors {
+            let rhs = neighbor.g + cost(&nodes, neighbor, current);
+            if rhs < min_rhs {
+                min_rhs = rhs;
+                next_node = neighbor;
+            }
+        }
+
+        current = next_node;
+        path.push(current);
+    }
+
+    path.reverse();
+
+    // print the path
+    println!("Optimal path:");
+    for node in &path {
+        println!("({}, {})", node.x, node.y);
+    }
+}

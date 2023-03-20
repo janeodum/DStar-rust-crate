@@ -8,6 +8,8 @@ use std::collections::{BinaryHeap, HashSet};
 use std::hash::Hash;
 use std::iter::FusedIterator;
 use std::usize;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use super::reverse_path;
 use crate::FxIndexMap;
@@ -313,3 +315,21 @@ impl<N: Clone + Eq + Hash> Iterator for DstarSolution<N> {
 }
 
 impl<N: Clone + Eq + Hash> FusedIterator for DstarSolution<N> {}
+
+// Define a node in the heap
+struct Node<T> {
+    value: T,
+    degree: usize,
+    marked: bool,
+    parent: Option<Rc<RefCell<Node<T>>>>,
+    child: Option<Rc<RefCell<Node<T>>>>,
+    left: Option<Rc<RefCell<Node<T>>>>,
+    right: Option<Rc<RefCell<Node<T>>>>,
+}
+
+// Define the Fibonacci Heap struct
+pub struct FibonacciHeap<T: Ord> {
+    root_list: Option<Rc<RefCell<Node<T>>>>,
+    min_node: Option<Rc<RefCell<Node<T>>>>,
+    n: usize,
+}

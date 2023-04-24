@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["dstar","fixedbitset","hashbrown","indexmap","integer_sqrt","num_traits","proc_macro2","quote","rustc_hash","syn","thiserror","thiserror_impl","unicode_ident"];

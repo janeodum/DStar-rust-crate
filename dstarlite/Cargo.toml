@@ -1,0 +1,21 @@
+[package]
+name = "dstar"
+description = "Pathfinding dstar algorithm"
+repository = "https://github.com/janeodum/DStar-rust-crate/tree/main/Pathplanning"
+keywords = ["shortest-path", "dstar"]
+license = "Apache-2.0/MIT"
+authors = ["janeodum<jane.odum@uga.edu>, Poojadulam<pooja.dulam@uga.edu>, vaishnavi<vg99189@uga.edu>, Jyo<jyothirmai.kallepalli@uga.edu>"]
+categories = ["algorithms"]
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+fixedbitset = "0.4.2"
+num-traits = "0.2.15"
+indexmap = "1.9.2"
+rustc-hash = "1.1.0"
+integer-sqrt = "0.1.5"
+thiserror = "1.0.38"
+rand="0.3.14"
